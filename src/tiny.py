@@ -1,4 +1,5 @@
 from flask import Flask, request, redirect, render_template
+from datetime import datetime
 import logging
 import json
 import os
@@ -49,13 +50,36 @@ def lookup(key):
         return json.dumps({"error": "redis down"})
     try:
         url = rdb.get(key)
+        stats = rdb.get("{}-{}".format("stats", key))
     except (ConnectionError, TimeoutError):
         return json.dumps({"error": "redis server error, contact admin"})
     if url is None:
         return json.dumps({"error": "Invalid key"})
     if validators.validate_url(url.decode()) is not None:
+        if stats is not None:
+            stats = json.loads(stats)
+            stats["visits"] = stats["visits"] + 1
+            try:
+                rdb.set("{}-{}".format("stats", key), json.dumps(stats))
+            except (ConnectionError, TimeoutError):
+                return json.dumps({"error":
+                                   "redis server error, contact admin"})
         return redirect(validators.validate_redirect(url))
     return json.dumps({"error": "Invalid url"})
+
+
+@app.route('/stats/<key>/', methods=["GET"])
+def stats(key):
+    try:
+        rdb = redis_wrapper.new_redis_connection()
+    except redis.exceptions.ConnectionError:
+        return json.dumps({"error": "redis down"})
+    stats_key = "{}-{}".format("stats", key)
+    try:
+        stats = rdb.get(stats_key)
+    except (ConnectionError, TimeoutError):
+        return json.dumps({"error": "redis server error, contact admin"})
+    return stats
 
 
 @app.route('/add/', methods=["POST"])
@@ -98,9 +122,19 @@ def add_encoded():
         if custom_lookup is not None:
             return json.dumps({"error": "Custom short link exists"})
         link_key = custom
+    stats_key = "{}-{}".format("stats", link_key)
+    time_fmt = "%Y/%m/%d %H:%M:%S"
+    stats_data = json.dumps({"created": datetime.utcnow().strftime(time_fmt),
+                             "visits": 0})
     try:
         rdb.set(link_key, url)
+        rdb.set(stats_key, stats_data)
     except (ConnectionError, TimeoutError):
         return json.dumps({"error": "redis server error, contact admin"})
+
     link_url = urllib.parse.urljoin(os.getenv("DOMAIN_NAME"), link_key)
-    return json.dumps({"status": "success", "url": link_url}), 200
+    stats_url = urllib.parse.urljoin(os.getenv("DOMAIN_NAME"),
+                                     "stats/" + link_key)
+    return json.dumps({"status": "success",
+                       "stats_url": stats_url,
+                       "url": link_url}), 200

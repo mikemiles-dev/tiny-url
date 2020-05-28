@@ -62,6 +62,11 @@ Add
 ```
 Creates Tiny URL.  Requires POST with formdata ?url=<encoded url>
 
+Stats
+```
+/stats/
+```
+Collected stats for short url
 
 # Tests
 

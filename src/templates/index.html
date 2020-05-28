@@ -10,11 +10,13 @@ $(document).ready(function(){
    $form.submit(function(){
       $.post($(this).attr('action'), $(this).serialize(), function(response){
           $("#results").text("");
+          $("#stats").text("");
           console.log(response);
           if(typeof(response.url) === "undefined") {
               $("#results").text(response.error);
           } else {
               $("#results").html("<a target='_blank' href='" + response.url + "'>" + response.url +      "</a>");
+              $("#stats").html("<a target='_blank' href='" + response.stats_url + "'>Stats</a>");
           }
       },'json');
       return false;
@@ -39,7 +41,8 @@ Custom Short Link:<br>
 
 <br><br>
 
-<div id="results"></div>
+<div id="results"></div><br><br>
+<div id="stats"></div>
 
 </form>
 
