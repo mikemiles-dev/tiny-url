@@ -80,6 +80,8 @@ def stats(key):
         stats = rdb.get(stats_key)
     except (ConnectionError, TimeoutError):
         return json.dumps({"error": "redis server error, contact admin"})
+    if stats is None:
+        return json.dumps({"error": "No stats"})
     stats = json.loads(stats)
     dt_created = datetime.strptime(stats["created"], DT_FMT)
     diff_dt = (datetime.utcnow() - dt_created).days + 1
