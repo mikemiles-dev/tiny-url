@@ -12,6 +12,7 @@ from src import redis_wrapper, validators
 app = Flask(__name__,  template_folder='templates')
 
 INCREMENT_KEY = "SHORTENER_INDEX"
+DT_FMT = "%Y/%m/%d %H:%M:%S"
 
 FORMATTER = logging.Formatter('%(asctime)s - %(name)s - '
                               '%(levelname)s - %(message)s')
@@ -79,7 +80,11 @@ def stats(key):
         stats = rdb.get(stats_key)
     except (ConnectionError, TimeoutError):
         return json.dumps({"error": "redis server error, contact admin"})
-    return stats
+    stats = json.loads(stats)
+    dt_created = datetime.strptime(stats["created"], DT_FMT)
+    diff_dt = (datetime.utcnow() - dt_created).days + 1
+    stats["average_visits_per_day"] = stats["visits"] / diff_dt
+    return json.dumps(stats)
 
 
 @app.route('/add/', methods=["POST"])
@@ -123,8 +128,7 @@ def add_encoded():
             return json.dumps({"error": "Custom short link exists"})
         link_key = custom
     stats_key = "{}-{}".format("stats", link_key)
-    time_fmt = "%Y/%m/%d %H:%M:%S"
-    stats_data = json.dumps({"created": datetime.utcnow().strftime(time_fmt),
+    stats_data = json.dumps({"created": datetime.utcnow().strftime(DT_FMT),
                              "visits": 0})
     try:
         rdb.set(link_key, url)
