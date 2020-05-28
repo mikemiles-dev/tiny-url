@@ -1,0 +1,46 @@
+<html>
+
+<head>
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+</head>
+
+<script>
+$(document).ready(function(){
+   var $form = $('form');
+   $form.submit(function(){
+      $.post($(this).attr('action'), $(this).serialize(), function(response){
+          $("#results").text("");
+          console.log(response);
+          if(typeof(response.url) === "undefined") {
+              $("#results").text(response.error);
+          } else {
+              $("#results").html("<a target='_blank' href='" + response.url + "'>" + response.url +      "</a>");
+          }
+      },'json');
+      return false;
+   });
+});
+</script>
+
+<h1>Tiny URL creator</h1>
+
+<br>
+
+<form action="/add/" method="POST">
+
+Enter URL:<br>
+<textarea name="url" id="url"></textarea><br>
+Custom Short Link:<br>
+<input type="text" name="custom" id="custom"></input>
+
+<br><br>
+
+<input type="submit" value="Create">
+
+<br><br>
+
+<div id="results"></div>
+
+</form>
+
+<html>
