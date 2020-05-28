@@ -11,6 +11,7 @@ regex = re.compile(
 
 
 def validate_redirect(url):
+    """Validates URL is valid before we do redirect"""
     p = urlparse(url.decode(), 'http')
     netloc = p.netloc or p.path
     path = p.path if p.netloc else ''
@@ -22,4 +23,5 @@ def validate_redirect(url):
 
 
 def validate_url(url):
+    """Checks if is a url"""
     return re.match(regex, url)

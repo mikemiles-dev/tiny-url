@@ -2,6 +2,7 @@ import signal
 
 
 class GracefulKiller:
+    """Class to assist in signal shutdown with redis pool"""
 
     kill_now = False
 
