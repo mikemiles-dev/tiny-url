@@ -40,5 +40,5 @@ test:
 	$(MAKE) redis-test-stop || true
 	@echo Starting Redis test service
 	$(MAKE) redis-test-start
-	export REDIS_HOST=redis://127.0.0.1:7002;pytest -v || true
+	REDIS_HOST=redis://127.0.0.1:7002;pytest -v || true
 	$(MAKE) redis-test-stop

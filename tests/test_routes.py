@@ -1,6 +1,7 @@
 # project/test_basic.py
 
 
+import json
 import unittest
 
 from src.tiny import app
@@ -21,26 +22,24 @@ class BasicTests(unittest.TestCase):
 
         self.assertEqual(app.debug, False)
 
-    # executed after each test
-    def tearDown(self):
-        pass
-
-###############
-#    tests    #
-###############
+    ###############
+    #    tests    #
+    ###############
 
     def test_main_page(self):
         response = self.app.get('/', follow_redirects=True)
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(len(response.data) > 0, True)
+        self.assertTrue(len(response.data) > 0)
 
     def test_add(self):
         """Test we can add, get short link, and get redirect"""
         short_link = "jR"
         response = self.app.post('/add/',
                                  data={"url": "www.example.com"})
-        add_resp = b'{"status": "success", "url": "http://localhost:5000/jR"}'
-        self.assertEqual(response.data, add_resp)
+        add_resp = {"status": "success",
+                    "stats_url": "http://localhost:5000/stats/jR",
+                    "url": "http://localhost:5000/jR"}
+        self.assertEqual(json.loads(response.data), add_resp)
         self.assertEqual(response.status_code, 200)
         response = self.app.get("/{}".format(short_link),
                                 follow_redirects=False)
@@ -66,7 +65,3 @@ class BasicTests(unittest.TestCase):
                          b'{"error": "Custom short link exists"}')
 
     #  Todo add more tests for error conditions
-
-
-if __name__ == "__main__":
-    unittest.main()

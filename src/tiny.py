@@ -101,9 +101,7 @@ def add_encoded():
     """
     url = request.form.get('url')
     custom = request.form.get('custom')
-    if url is None:
-        return json.dumps({"error": "url not provided"})
-    if validators.validate_url(url) is None:
+    if url is None and validators.validate_url(url) is None:
         return json.dumps({"error": "url not provided"})
     try:
         rdb = redis_wrapper.new_redis_connection()
