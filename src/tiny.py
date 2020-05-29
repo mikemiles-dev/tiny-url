@@ -3,11 +3,11 @@ from datetime import datetime
 import logging
 import json
 import os
-import redis
 import myrust_shortener
 import urllib
 
-from src import redis_wrapper, validators
+from src.redis_wrapper import redis_connect
+from src import validators
 
 app = Flask(__name__,  template_folder='templates')
 
@@ -45,24 +45,25 @@ def lookup(key):
     or error.
     Always returns json string
     """
-    try:
-        rdb = redis_wrapper.new_redis_connection()
-    except redis.exceptions.ConnectionError:
+    rdb = redis_connect()
+    if rdb is None:
         return json.dumps({"error": "redis down"})
     try:
         url = rdb.get(key)
-        stats = rdb.get("{}-{}".format("stats", key))
-    except (ConnectionError, TimeoutError):
+        stats = rdb.get(f"stats-{key}")
+    except (ConnectionError, TimeoutError) as redis_timeout:
+        log.error(redis_timeout)
         return json.dumps({"error": "redis server error, contact admin"})
     if url is None:
         return json.dumps({"error": "Invalid key"})
     if validators.validate_url(url.decode()) is not None:
         if stats is not None:
             stats = json.loads(stats)
-            stats["visits"] = stats["visits"] + 1
+            stats["visits"] += 1
             try:
-                rdb.set("{}-{}".format("stats", key), json.dumps(stats))
-            except (ConnectionError, TimeoutError):
+                rdb.set(f"stats-{key}", json.dumps(stats))
+            except (ConnectionError, TimeoutError) as stats_error:
+                log.error(stats_error)
                 return json.dumps({"error":
                                    "redis server error, contact admin"})
         return redirect(validators.validate_redirect(url))
@@ -71,14 +72,14 @@ def lookup(key):
 
 @app.route('/stats/<key>/', methods=["GET"])
 def stats(key):
-    try:
-        rdb = redis_wrapper.new_redis_connection()
-    except redis.exceptions.ConnectionError:
+    rdb = redis_connect()
+    if rdb is None:
         return json.dumps({"error": "redis down"})
-    stats_key = "{}-{}".format("stats", key)
+    stats_key = f"stats-{key}"
     try:
         stats = rdb.get(stats_key)
-    except (ConnectionError, TimeoutError):
+    except (ConnectionError, TimeoutError) as redis_error:
+        log.error(redis_error)
         return json.dumps({"error": "redis server error, contact admin"})
     if stats is None:
         return json.dumps({"error": "No stats"})
@@ -103,14 +104,14 @@ def add_encoded():
     custom = request.form.get('custom')
     if url is None and validators.validate_url(url) is None:
         return json.dumps({"error": "url not provided"})
-    try:
-        rdb = redis_wrapper.new_redis_connection()
-    except redis.exceptions.ConnectionError:
+    rdb = redis_connect()
+    if rdb is None:
         return json.dumps({"error": "redis down"})
     if custom is None:
         try:
             shorten_inc = rdb.incr(INCREMENT_KEY)
-        except (ConnectionError, TimeoutError):
+        except (ConnectionError, TimeoutError) as redis_inc_error:
+            log.error(redis_inc_error)
             return json.dumps({"error":
                                "redis server error, contact admin"})
         try:
@@ -127,13 +128,14 @@ def add_encoded():
         if custom_lookup is not None:
             return json.dumps({"error": "Custom short link exists"})
         link_key = custom
-    stats_key = "{}-{}".format("stats", link_key)
+    stats_key = f"stats-{link_key}"
     stats_data = json.dumps({"created": datetime.utcnow().strftime(DT_FMT),
                              "visits": 0})
     try:
         rdb.set(link_key, url)
         rdb.set(stats_key, stats_data)
-    except (ConnectionError, TimeoutError):
+    except (ConnectionError, TimeoutError) as stats_error:
+        log.error(stats_error)
         return json.dumps({"error": "redis server error, contact admin"})
 
     link_url = urllib.parse.urljoin(os.getenv("DOMAIN_NAME"), link_key)

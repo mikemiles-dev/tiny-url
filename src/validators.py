@@ -1,7 +1,7 @@
 import re
 from urllib.parse import urlparse, ParseResult
 
-regex = re.compile(
+url_regex = re.compile(
         r'(?:(?:[A-Z0-9](?:[A-Z0-9-]'
         r'{0,61}[A-Z0-9])?\.)+(?:[A-Z]{2,6}\.?|[A-Z0-9-]{2,}\.?)|'  # domain...
         r'localhost|'  # localhost...
@@ -11,17 +11,16 @@ regex = re.compile(
 
 
 def validate_redirect(url):
-    """Validates URL is valid before we do redirect"""
-    p = urlparse(url.decode(), 'http')
-    netloc = p.netloc or p.path
-    path = p.path if p.netloc else ''
+    """Basically converts www.example.com to http://www.example.com"""
+    pars = urlparse(url.decode(), 'http')
+    netloc = pars.netloc or pars.path
+    path = pars.path if pars.netloc else ''
     if not netloc.startswith('www.'):
         netloc = 'www.' + netloc
 
-    p = ParseResult('http', netloc, path, *p[3:])
-    return p.geturl()
+    return ParseResult('http', netloc, path, *pars[3:]).geturl()
 
 
 def validate_url(url):
     """Checks if is a url"""
-    return re.match(regex, url)
+    return re.match(url_regex, url)
