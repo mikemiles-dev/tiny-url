@@ -107,7 +107,7 @@ def add_encoded():
     rdb = redis_connect()
     if rdb is None:
         return json.dumps({"error": "redis down"})
-    if custom is None:
+    if not custom:
         try:
             shorten_inc = rdb.incr(INCREMENT_KEY)
         except (ConnectionError, TimeoutError) as redis_inc_error:
